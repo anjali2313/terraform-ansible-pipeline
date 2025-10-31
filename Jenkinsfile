@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        TF_DIR = '.'                 // Path to Terraform files (current directory)
+        TF_DIR = '.'                 
         AWS_REGION = 'ap-northeast-1'
     }
 
@@ -54,25 +54,14 @@ pipeline {
                 }
             }
         }
-
-        stage('Ansible Configuration') {
-            steps {
-                dir("./ansible") {
-                    sh '''
-                      echo "=== Running Ansible Playbook ==="
-                      ansible-playbook -i inventory.ini playbook.yml
-                    '''
-                }
-            }
-        }
     }
 
     post {
         success {
-            echo "✅ SUCCESS: Terraform + Ansible pipeline completed!"
+            echo "✅ SUCCESS: Terraform pipeline completed successfully!"
         }
         failure {
-            echo "❌ FAILURE: Check Jenkins logs for details."
+            echo "❌ FAILURE: Something went wrong — check Jenkins logs."
         }
     }
 }
