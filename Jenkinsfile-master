@@ -1,0 +1,27 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Trigger Terraform Pipeline') {
+            steps {
+                echo "🚀 Starting Terraform pipeline from master controller..."
+                build job: 'terraform-ec2-simple', propagate: true, wait: true
+            }
+        }
+
+        stage('Post Confirmation') {
+            steps {
+                echo "✅ Terraform pipeline completed successfully!"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "🎉 Master controller pipeline finished successfully!"
+        }
+        failure {
+            echo "❌ Master controller pipeline failed — check logs."
+        }
+    }
+}
