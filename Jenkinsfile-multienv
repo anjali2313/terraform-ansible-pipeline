@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'staging', 'prod'], description: 'Select environment to deploy')
+    }
+
+    stages {
+        stage('Select Environment') {
+            steps {
+                echo "✅ Selected environment: ${params.ENVIRONMENT}"
+            }
+        }
+
+        stage('Trigger Terraform Job') {
+            steps {
+                script {
+                    echo "🚀 Triggering Terraform job for ${params.ENVIRONMENT} environment..."
+
+                    build job: 'terraform-ec2-simple',
+                        parameters: [
+                            string(name: 'ENVIRONMENT', value: params.ENVIRONMENT)
+                        ],
+                        wait: true
+                }
+            }
+        }
+
+        stage('Approval for Production') {
+            when {
+                expression { params.ENVIRONMENT == 'prod' }
+            }
+            steps {
+                timeout(time: 10, unit: 'MINUTES') {
+                    input message: "Approve Production Deployment?"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ ${params.ENVIRONMENT} deployment completed successfully!"
+        }
+        failure {
+            echo "❌ ${params.ENVIRONMENT} deployment failed. Check Jenkins logs."
+        }
+    }
+}
