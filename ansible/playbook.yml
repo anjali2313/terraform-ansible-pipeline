@@ -1,0 +1,24 @@
+---
+- name: Configure Web Server
+  hosts: web
+  become: true
+
+  tasks:
+    - name: Install Nginx
+      ansible.builtin.dnf:
+        name: nginx
+        state: present
+
+    - name: Start and enable Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Copy a simple index page
+      ansible.builtin.copy:
+        content: "<h1>Hello from Ansible!</h1>"
+        dest: /usr/share/nginx/html/index.html
+        owner: root
+        group: root
+        mode: '0644'
