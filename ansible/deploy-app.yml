@@ -1,0 +1,18 @@
+---
+- name: Deploy Web Application
+  hosts: web
+  become: yes
+
+  tasks:
+    - name: Copy index page to web root
+      ansible.builtin.copy:
+        src: ./index.html
+        dest: /usr/share/nginx/html/index.html
+        owner: nginx
+        group: nginx
+        mode: "0644"
+
+    - name: Restart Nginx after deployment
+      ansible.builtin.service:
+        name: nginx
+        state: restarted

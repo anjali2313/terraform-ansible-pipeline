@@ -1,13 +1,10 @@
 pipeline {
     agent any
-
     environment {
         TF_DIR = '.'
         AWS_REGION = 'ap-northeast-1'
     }
-
     stages {
-
         stage('Terraform Init & Validate') {
             steps {
                 dir("${TF_DIR}") {
@@ -15,7 +12,7 @@ pipeline {
                                          accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                                          secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                         sh '''
-                          echo "=== Starting Terraform Init & Validate ==="
+                          echo "=== Terraform Init & Validate ==="
                           terraform init -input=false
                           terraform validate
                         '''
@@ -31,7 +28,7 @@ pipeline {
                                          accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                                          secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                         sh '''
-                          echo "=== Running Terraform Plan ==="
+                          echo "=== Terraform Plan ==="
                           terraform plan -out=tfplan
                         '''
                     }
@@ -54,33 +51,17 @@ pipeline {
                                          accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                                          secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                         sh '''
-                          echo "=== Applying Terraform Infrastructure ==="
+                          echo "=== Terraform Apply ==="
                           terraform apply -auto-approve tfplan
                         '''
                     }
                 }
             }
         }
-
-        // ✅ New stage
-        stage('Ansible Configuration') {
-            steps {
-                dir('ansible') {
-                    sh '''
-                      echo "=== Running Ansible Playbook ==="
-                      ansible-playbook -i inventory.ini playbook.yml
-                    '''
-                }
-            }
-        }
     }
 
     post {
-        success {
-            echo "✅ SUCCESS: Terraform + Ansible pipeline completed!"
-        }
-        failure {
-            echo "❌ FAILURE: Check Jenkins logs for details."
-        }
+        success { echo "✅ SUCCESS: Terraform-only pipeline completed!" }
+        failure { echo "❌ FAILURE: Terraform-only pipeline failed!" }
     }
 }
