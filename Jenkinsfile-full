@@ -2,74 +2,46 @@ pipeline {
     agent any
 
     environment {
-        TF_DIR = '.'
-        AWS_REGION = 'ap-northeast-1'
+        AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
     }
 
     stages {
 
-        stage('Terraform Init & Validate') {
+        stage('Terraform Init & Plan') {
             steps {
-                dir("${TF_DIR}") {
-                    withCredentials([aws(credentialsId: 'ec2-key',
-                                         accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                        sh '''
-                          echo "=== Starting Terraform Init & Validate ==="
-                          terraform init -input=false
-                          terraform validate
-                        '''
-                    }
-                }
-            }
-        }
-
-        stage('Terraform Plan') {
-            steps {
-                dir("${TF_DIR}") {
-                    withCredentials([aws(credentialsId: 'ec2-key',
-                                         accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                        sh '''
-                          echo "=== Running Terraform Plan ==="
-                          terraform plan -out=tfplan
-                        '''
-                    }
-                }
-            }
-        }
-
-        stage('Approval Step') {
-            steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                    input message: 'Approve Terraform Apply?'
+                echo "🚀 Initializing Terraform..."
+                dir('.') {
+                    sh 'terraform init -input=false'
+                    sh 'terraform validate'
+                    sh 'terraform plan -out=tfplan'
                 }
             }
         }
 
         stage('Terraform Apply') {
             steps {
-                dir("${TF_DIR}") {
-                    withCredentials([aws(credentialsId: 'ec2-key',
-                                         accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                        sh '''
-                          echo "=== Applying Terraform Infrastructure ==="
-                          terraform apply -auto-approve tfplan
-                        '''
-                    }
+                echo "🚀 Applying Terraform configuration..."
+                dir('.') {
+                    sh 'terraform apply -auto-approve tfplan'
                 }
             }
         }
 
-        // ✅ New stage
-        stage('Ansible Configuration') {
+        stage('Ansible Setup') {
             steps {
+                echo "🧩 Running Ansible setup-server.yml..."
                 dir('ansible') {
-                    sh '''
-                      echo "=== Running Ansible Playbook ==="
-                      ansible-playbook -i inventory.ini playbook.yml
-                    '''
+                    sh 'ansible-playbook -i inventory.ini setup-server.yml'
+                }
+            }
+        }
+
+        stage('Ansible Deploy') {
+            steps {
+                echo "📦 Running Ansible deploy-app.yml..."
+                dir('ansible') {
+                    sh 'ansible-playbook -i inventory.ini deploy-app.yml'
                 }
             }
         }
@@ -77,10 +49,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ SUCCESS: Terraform + Ansible pipeline completed!"
+            echo "✅ All stages completed successfully!"
         }
         failure {
-            echo "❌ FAILURE: Check Jenkins logs for details."
+            echo "❌ Build failed — check logs for details."
         }
     }
 }
