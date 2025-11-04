@@ -5,3 +5,4 @@ trigger test
 webhook test Tue Nov  4 18:55:34 JST 2025
 trigger test
 trigger build again
+retry trigger
