@@ -7,7 +7,6 @@ pipeline {
     }
 
     stages {
-
         stage('Terraform Init & Plan') {
             steps {
                 echo "🚀 Initializing Terraform..."
@@ -21,7 +20,7 @@ pipeline {
 
         stage('Terraform Apply') {
             steps {
-                echo "🚀 Applying Terraform configuration..."
+                echo "⚙️ Applying Terraform configuration..."
                 dir('.') {
                     sh 'terraform apply -auto-approve tfplan'
                 }
@@ -39,56 +38,7 @@ pipeline {
 
         stage('Ansible Deploy') {
             steps {
-                echo "📦 Running Ansible deploy-app.yml..."
-                dir('ansible') {
-                    sh 'ansible-playbook -i inventory.ini deploy-app.yml'
-                }
-            }
-        }
-    }
-
-    pipeline {
-    agent any
-
-    environment {
-        AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
-        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
-    }
-
-    stages {
-
-        stage('Terraform Init & Plan') {
-            steps {
-                echo "🚀 Initializing Terraform..."
-                dir('.') {
-                    sh 'terraform init -input=false'
-                    sh 'terraform validate'
-                    sh 'terraform plan -out=tfplan'
-                }
-            }
-        }
-
-        stage('Terraform Apply') {
-            steps {
-                echo "🚀 Applying Terraform configuration..."
-                dir('.') {
-                    sh 'terraform apply -auto-approve tfplan'
-                }
-            }
-        }
-
-        stage('Ansible Setup') {
-            steps {
-                echo "🧩 Running Ansible setup-server.yml..."
-                dir('ansible') {
-                    sh 'ansible-playbook -i inventory.ini setup-server.yml'
-                }
-            }
-        }
-
-        stage('Ansible Deploy') {
-            steps {
-                echo "📦 Running Ansible deploy-app.yml..."
+                echo "📦 Deploying Application via Ansible..."
                 dir('ansible') {
                     sh 'ansible-playbook -i inventory.ini deploy-app.yml'
                 }
@@ -98,12 +48,12 @@ pipeline {
 
     post {
         success {
-            echo "✅ All stages completed successfully!"
-            slackSend(channel: '#new-channel', color: 'good', message: "✅ Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER} by ${env.BUILD_USER}")
+            slackSend(channel: '#new-channel', color: 'good',
+                message: "✅ Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
         }
         failure {
-            echo "❌ Build failed — check logs for details."
-            slackSend(channel: '#new-channel', color: 'danger', message: "❌ Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+            slackSend(channel: '#new-channel', color: 'danger',
+                message: "❌ Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
         }
     }
 }
