@@ -15,5 +15,5 @@ variable "instance_type" {
 
 variable "key_name" {
   description = "Name of your AWS EC2 key pair"
-  default     = "ec2-key"   # Change this if your key name differs
+  default     = "ec2-key" # Change this if your key name differs
 }
