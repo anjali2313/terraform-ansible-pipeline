@@ -4,15 +4,22 @@ pipeline {
     environment {
         AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
+        AWS_REGION            = 'ap-northeast-1'
+        TF_PLUGIN_CACHE_DIR   = "${HOME}/.terraform.d/plugin-cache"
     }
 
     stages {
+
         stage('Terraform Init & Validate') {
             steps {
                 echo "🚀 Initializing Terraform configuration..."
                 dir('.') {
-                    sh 'terraform init -input=false'
-                    sh 'terraform validate'
+                    sh '''
+                        mkdir -p $TF_PLUGIN_CACHE_DIR
+                        terraform init -input=false -upgrade
+                        terraform fmt -check
+                        terraform validate
+                    '''
                 }
             }
         }
@@ -21,14 +28,17 @@ pipeline {
             steps {
                 echo "🧾 Generating Terraform Plan..."
                 dir('.') {
-                    sh 'terraform plan -out=tfplan'
+                    sh 'terraform plan -input=false -out=tfplan'
                 }
             }
         }
 
         stage('Terraform Apply') {
+            when {
+                branch 'main'
+            }
             steps {
-                echo "⚙️ Applying Terraform changes..."
+                echo "⚙️ Applying Terraform changes (main branch only)..."
                 dir('.') {
                     sh 'terraform apply -auto-approve tfplan'
                 }
@@ -42,6 +52,9 @@ pipeline {
         }
         failure {
             echo "❌ Terraform deployment failed — check logs!"
+        }
+        always {
+            cleanWs()
         }
     }
 }

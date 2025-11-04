@@ -4,23 +4,33 @@ pipeline {
     environment {
         AWS_ACCESS_KEY_ID     = credentials('aws-access-key')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
+        AWS_REGION            = 'ap-northeast-1'
+        TF_PLUGIN_CACHE_DIR   = "${HOME}/.terraform.d/plugin-cache"
     }
 
     stages {
+
         stage('Terraform Init & Plan') {
             steps {
                 echo "🚀 Initializing Terraform..."
                 dir('.') {
-                    sh 'terraform init -input=false'
-                    sh 'terraform validate'
-                    sh 'terraform plan -out=tfplan'
+                    sh '''
+                        mkdir -p $TF_PLUGIN_CACHE_DIR
+                        terraform init -input=false -upgrade
+                        terraform fmt -check
+                        terraform validate
+                        terraform plan -input=false -out=tfplan
+                    '''
                 }
             }
         }
 
         stage('Terraform Apply') {
+            when {
+                branch 'main'
+            }
             steps {
-                echo "⚙️ Applying Terraform configuration..."
+                echo "⚙️ Applying Terraform configuration (main branch only)..."
                 dir('.') {
                     sh 'terraform apply -auto-approve tfplan'
                 }
@@ -48,12 +58,31 @@ pipeline {
 
     post {
         success {
-            slackSend(channel: '#new-channel', color: 'good',
-                message: "✅ Build Successful: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+            slackSend(
+                baseUrl: 'https://hooks.slack.com/services',
+                teamDomain: 'anjali-project',
+                tokenCredentialId: 'slack-webhook',
+                channel: '#new-channel',
+                color: 'good',
+                message: "✅ *SUCCESS:* ${env.JOB_NAME} #${env.BUILD_NUMBER} completed successfully!"
+            )
+            echo "✅ Terraform + Ansible pipeline completed successfully!"
         }
+
         failure {
-            slackSend(channel: '#new-channel', color: 'danger',
-                message: "❌ Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+            slackSend(
+                baseUrl: 'https://hooks.slack.com/services',
+                teamDomain: 'anjali-project',
+                tokenCredentialId: 'slack-webhook',
+                channel: '#new-channel',
+                color: 'danger',
+                message: "❌ *FAILED:* ${env.JOB_NAME} #${env.BUILD_NUMBER} — check Jenkins logs for details."
+            )
+            echo "❌ Terraform or Ansible stage failed — check logs!"
+        }
+
+        always {
+            cleanWs()
         }
     }
 }
